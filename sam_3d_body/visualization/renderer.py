@@ -149,6 +149,7 @@ class Renderer:
         vertices: np.array,
         cam_t: np.array,
         image: np.ndarray,
+        camera_poses: Optional[np.array] = None,
         full_frame: bool = False,
         imgname: Optional[str] = None,
         side_view=False,
@@ -218,6 +219,7 @@ class Renderer:
 
         camera_pose = np.eye(4)
         camera_pose[:3, 3] = camera_translation
+
         if camera_center is None:
             camera_center = [image.shape[1] / 2.0, image.shape[0] / 2.0]
         camera = pyrender.IntrinsicsCamera(
@@ -227,7 +229,7 @@ class Renderer:
             cy=camera_center[1],
             zfar=1e12,
         )
-        scene.add(camera, pose=camera_pose)
+        camera_node = scene.add(camera, pose=camera_pose)
 
         light_nodes = create_raymond_lights()
         if tri_color_lights:
@@ -243,6 +245,29 @@ class Renderer:
         for node in light_nodes:
             scene.add_node(node)
 
+        # Render for multiple camera poses
+        if camera_poses is not None:
+            output_imgs = []
+            for camera_pose in camera_poses:
+                scene.set_pose(camera_node, pose=camera_pose)
+
+                color, _rend_depth = renderer.render(scene, flags=pyrender.RenderFlags.RGBA)
+                color = color.astype(np.float32) / 255.0
+
+                if return_rgba:
+                    output_imgs.append(color)
+
+                valid_mask = (color[:, :, -1])[:, :, np.newaxis]
+                output_img = color[:, :, :3] * valid_mask + (1 - valid_mask) * image
+
+                output_img = output_img.astype(np.float32)
+                output_imgs.append(output_img)
+            
+            renderer.delete()
+            output_imgs = np.stack(output_imgs, axis=0)
+            return output_imgs
+
+        # render for single camera pose
         color, _rend_depth = renderer.render(scene, flags=pyrender.RenderFlags.RGBA)
 
         color = color.astype(np.float32) / 255.0

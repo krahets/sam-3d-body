@@ -164,7 +164,8 @@ class SAM3DBodyEstimator:
         # - either provided externally or generated via default FOV estimator
         if cam_int is not None:
             print("Using provided camera intrinsics...")
-            cam_int = cam_int.to(batch["img"])
+            cam_int = torch.from_numpy(cam_int).unsqueeze(0)
+            cam_int = cam_int.to(batch["img"]) 
             batch["cam_int"] = cam_int.clone()
         elif self.fov_estimator is not None:
             print("Running FOV estimator ...")

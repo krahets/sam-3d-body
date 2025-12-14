@@ -3,6 +3,8 @@ Utility functions for SAM 3D Body demo notebook
 """
 
 import os
+import json
+import trimesh
 from typing import Any, Dict, List, Optional
 
 import cv2
@@ -210,17 +212,19 @@ def save_mesh_results(
     img_cv2: np.ndarray,
     outputs: List[Dict[str, Any]],
     faces: np.ndarray,
-    save_dir: str,
-    image_name: str,
+    save_path: str,
+    save_logs: bool = False,
 ) -> List[str]:
     """Save 3D mesh results to files and return PLY file paths"""
     import json
 
+    save_dir = os.path.dirname(save_path)
+    image_name = os.path.splitext(os.path.basename(save_path))[0]
     os.makedirs(save_dir, exist_ok=True)
     ply_files = []
 
     # Save focal length
-    if outputs:
+    if outputs and save_logs:
         focal_length_data = {"focal_length": float(outputs[0]["focal_length"])}
         focal_length_path = os.path.join(save_dir, f"{image_name}_focal_length.json")
         with open(focal_length_path, "w") as f:
@@ -235,10 +239,18 @@ def save_mesh_results(
         tmesh = renderer.vertices_to_trimesh(
             person_output["pred_vertices"], person_output["pred_cam_t"], LIGHT_BLUE
         )
-        mesh_filename = f"{image_name}_mesh_{pid:03d}.ply"
+        if len(outputs) > 1:
+            mesh_filename = f"{image_name}_mesh_{pid:03d}.ply"
+        else:
+            mesh_filename = f"{image_name}.ply"
         mesh_path = os.path.join(save_dir, mesh_filename)
         tmesh.export(mesh_path)
         ply_files.append(mesh_path)
+
+        print(f"Saved mesh: {mesh_path}")
+
+        if not save_logs:
+            continue
 
         # Save individual overlay image
         img_mesh_overlay = (
@@ -268,12 +280,47 @@ def save_mesh_results(
         bbox_filename = f"{image_name}_bbox_{pid:03d}.png"
         cv2.imwrite(os.path.join(save_dir, bbox_filename), img_bbox)
 
-        print(f"Saved mesh: {mesh_path}")
         print(f"Saved overlay: {os.path.join(save_dir, overlay_filename)}")
         print(f"Saved bbox: {os.path.join(save_dir, bbox_filename)}")
 
     return ply_files
 
+def load_outputs(
+    output_path: str
+):
+    """Load outputs from a JSON file"""
+    with open(output_path, "r") as f:
+        outputs = json.load(f)
+
+    for output in outputs:
+        for key, val in output.items():
+            if isinstance(val, list):
+                output[key] = np.array(val, dtype=np.float32)
+            else:
+                output[key] = np.float32(val)
+
+    return outputs
+
+def save_outputs(
+    output_path: str, outputs: List[Dict[str, Any]]
+):
+    """Save outputs to a JSON file"""
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    res_list = []
+    for output in outputs:
+        res = {}
+        for key, val in output.items():
+            if isinstance(val, np.ndarray):
+                res[key] = val.tolist()
+            elif isinstance(val, np.generic):
+                res[key] = val.item()
+            else:
+                res[key] = val
+        res_list.append(res)
+
+    with open(output_path, "w") as f:
+        json.dump(res_list, f, indent=4)
+    print(f"Saved outputs to {output_path}")
 
 def display_results_grid(
     images: List[np.ndarray], titles: List[str], figsize_per_image: tuple = (6, 6)

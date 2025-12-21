@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from PIL import Image
 
 
 class HumanDetector:
@@ -18,8 +19,47 @@ class HumanDetector:
 
             self.detector = self.detector.to(self.device)
             self.detector.eval()
+        elif name == "sam3":
+            from sam3.model_builder import build_sam3_image_model
+            from sam3.model.sam3_image_processor import Sam3Processor
+            
+            self.detector = build_sam3_image_model()
+            self.processor = Sam3Processor(self.detector)
+            self.detector_func = lambda detector, img, **kwargs: self.sam3_run(
+                img, **kwargs
+            )
         else:
             raise NotImplementedError
+        
+    def sam3_run(self, img, det_cat_id: int = 0, bbox_thr: float = 0.5, **kwargs):
+        # switch bgr to rgb 
+        img = img[:, :, ::-1].copy()
+        img = Image.fromarray(img.astype('uint8'), 'RGB')
+        inference_state = self.processor.set_image(img)
+        # Prompt the model with text
+        output = self.processor.set_text_prompt(state=inference_state, prompt="person")
+
+        # Get the masks, bounding boxes, and scores
+        masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
+        
+        confident_idx = scores > bbox_thr
+        boxes = boxes[confident_idx].cpu().numpy()
+        
+        # resize the box with a scale factor 1.2
+        scale = 1.2
+        enlarged_boxes = []
+        for box in boxes:
+            x1, y1, x2, y2 = box
+            cx = (x1 + x2) / 2
+            cy = (y1 + y2) / 2
+            w = (x2 - x1) * scale
+            h = (y2 - y1) * scale
+            new_x1 = max(cx - w / 2, 0)
+            new_y1 = max(cy - h / 2, 0)
+            new_x2 = cx + w / 2
+            new_y2 = cy + h / 2
+            enlarged_boxes.append([new_x1, new_y1, new_x2, new_y2])
+        return np.array(enlarged_boxes)
 
     def run_human_detection(self, img, **kwargs):
         return self.detector_func(self.detector, img, **kwargs)

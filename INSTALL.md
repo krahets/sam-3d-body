@@ -31,6 +31,15 @@ pip install 'git+https://github.com/facebookresearch/detectron2.git@a1ce2f9' --n
 pip install git+https://github.com/microsoft/MoGe.git
 ```
 
+### 6. Install SAM3 (Optional)
+```bash
+# this is a minimal installation of sam3 only to support its inference 
+git clone https://github.com/facebookresearch/sam3.git
+cd sam3
+pip install -e .
+pip install decord psutil
+```
+
 
 ## Getting Model Checkpoints
 

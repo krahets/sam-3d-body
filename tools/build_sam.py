@@ -2,6 +2,7 @@
 
 import torch
 import numpy as np
+from PIL import Image
 
 
 class HumanSegmentor:
@@ -12,7 +13,10 @@ class HumanSegmentor:
             print("########### Using human segmentor: SAM2...")
             self.sam = load_sam2(device, **kwargs)
             self.sam_func = run_sam2
-
+        elif name == "sam3":
+            print("########### Using human segmentor: SAM3...")
+            self.sam = load_sam3(device, **kwargs)
+            self.sam_func = run_sam3
         else:
             raise NotImplementedError
     
@@ -32,6 +36,15 @@ def load_sam2(device, path):
     predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint, device=device))
     predictor.model.eval()
 
+    return predictor
+
+
+def load_sam3(device, path):
+    from sam3.model_builder import build_sam3_image_model
+    from sam3.model.sam3_image_processor import Sam3Processor
+    
+    model = build_sam3_image_model()
+    predictor = Sam3Processor(model)
     return predictor
 
 
@@ -60,6 +73,23 @@ def run_sam2(sam_predictor, img, boxes):
             # cv2.imwrite(os.path.join(save_dir, f"{os.path.basename(image_path)[:-4]}_mask_{i}.jpg"), (mask_1 * 255).astype(np.uint8))
         all_masks = np.stack(all_masks)
         all_scores = np.stack(all_scores)
-    
+
     return all_masks, all_scores
-        
+
+
+def run_sam3(sam_predictor, img, boxes):
+    # switch bgr to rgb 
+    img = img[:, :, ::-1].copy()
+    img = Image.fromarray(img.astype('uint8'), 'RGB')
+    inference_state = sam_predictor.set_image(img)
+    # Prompt the model with text
+    output = sam_predictor.set_text_prompt(state=inference_state, prompt="person")
+
+    # Get the masks, bounding boxes, and scores
+    masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
+    score_threshold = 0.5
+    confident_idx = scores > score_threshold
+    masks = masks[confident_idx].float().squeeze(1).cpu().numpy()
+    scores = scores[confident_idx].cpu().numpy()
+
+    return masks, scores

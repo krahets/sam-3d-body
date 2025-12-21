@@ -47,7 +47,8 @@ def main(args):
         human_detector = HumanDetector(
             name=args.detector_name, device=device, path=detector_path
         )
-    if len(segmentor_path):
+    
+    if (args.segmentor_name == "sam2" and len(segmentor_path)) or args.segmentor_name != "sam2":
         from tools.build_sam import HumanSegmentor
 
         human_segmentor = HumanSegmentor(

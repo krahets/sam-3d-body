@@ -6,6 +6,7 @@ import os
 import json
 import trimesh
 from typing import Any, Dict, List, Optional
+from glob import glob
 
 import cv2
 import matplotlib.pyplot as plt
@@ -247,8 +248,9 @@ def save_mesh_results(
         tmesh.export(mesh_path)
         ply_files.append(mesh_path)
 
-        print(f"Saved mesh: {mesh_path}")
+        # print(f"Saved mesh: {mesh_path}")
 
+        # ? skip saving overlay and bbox images
         if not save_logs:
             continue
 
@@ -285,42 +287,46 @@ def save_mesh_results(
 
     return ply_files
 
-def load_outputs(
-    output_path: str
-):
+def load_outputs(output_path: str):
     """Load outputs from a JSON file"""
-    with open(output_path, "r") as f:
-        outputs = json.load(f)
+    out_json_paths = sorted(glob(f"{output_path}_*.json"))
+    out_vertices_paths = [path.replace(".json", ".npy") for path in out_json_paths]
 
-    for output in outputs:
+    outputs = []
+    for out_json_path, out_vertices_path in zip(out_json_paths, out_vertices_paths):
+        with open(out_json_path, "r") as f:
+            output = json.load(f)
+
         for key, val in output.items():
             if isinstance(val, list):
                 output[key] = np.array(val, dtype=np.float32)
             else:
                 output[key] = np.float32(val)
+        output["pred_vertices"] = np.load(out_vertices_path)
+        outputs.append(output)
 
     return outputs
 
-def save_outputs(
-    output_path: str, outputs: List[Dict[str, Any]]
-):
+
+def save_outputs(output_path: str, outputs: List[Dict[str, Any]]):
     """Save outputs to a JSON file"""
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    res_list = []
-    for output in outputs:
+    for idx, output in enumerate(outputs):
         res = {}
         for key, val in output.items():
-            if isinstance(val, np.ndarray):
+            if key == "pred_vertices":
+                vertices = val
+            elif isinstance(val, np.ndarray):
                 res[key] = val.tolist()
             elif isinstance(val, np.generic):
                 res[key] = val.item()
             else:
                 res[key] = val
-        res_list.append(res)
 
-    with open(output_path, "w") as f:
-        json.dump(res_list, f, indent=4)
-    print(f"Saved outputs to {output_path}")
+        np.save(f"{output_path}_{idx:02d}.npy", vertices)
+        with open(f"{output_path}_{idx:02d}.json", "w") as f:
+            json.dump(res, f, indent=4)
+
 
 def display_results_grid(
     images: List[np.ndarray], titles: List[str], figsize_per_image: tuple = (6, 6)

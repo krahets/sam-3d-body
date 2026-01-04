@@ -149,6 +149,7 @@ class Renderer:
         vertices: np.array,
         cam_t: np.array,
         image: np.ndarray,
+        camera_images: Optional[np.ndarray] = None,
         camera_poses: Optional[np.array] = None,
         full_frame: bool = False,
         imgname: Optional[str] = None,
@@ -159,6 +160,9 @@ class Renderer:
         scene_bg_color=(0, 0, 0),
         tri_color_lights=False,
         return_rgba=False,
+        return_color=False,
+        return_depth=False,
+        return_valid_mask=False,
         camera_center=None,
     ) -> np.array:
         """
@@ -248,17 +252,18 @@ class Renderer:
         # Render for multiple camera poses
         if camera_poses is not None:
             output_imgs = []
-            for camera_pose in camera_poses:
+            for camera_image, camera_pose in zip(camera_images, camera_poses):
                 scene.set_pose(camera_node, pose=camera_pose)
 
                 color, _rend_depth = renderer.render(scene, flags=pyrender.RenderFlags.RGBA)
                 color = color.astype(np.float32) / 255.0
+                camera_image = camera_image.astype(np.float32) / 255.0
 
                 if return_rgba:
                     output_imgs.append(color)
 
                 valid_mask = (color[:, :, -1])[:, :, np.newaxis]
-                output_img = color[:, :, :3] * valid_mask + (1 - valid_mask) * image
+                output_img = color[:, :, :3] * valid_mask + (1 - valid_mask) * camera_image
 
                 output_img = output_img.astype(np.float32)
                 output_imgs.append(output_img)
@@ -280,7 +285,21 @@ class Renderer:
         output_img = color[:, :, :3] * valid_mask + (1 - valid_mask) * image
 
         output_img = output_img.astype(np.float32)
-        return output_img
+
+        outputs = [output_img]
+
+        if return_color:
+            outputs.append(color[:, :, :3])
+
+        if return_valid_mask:
+            outputs.append(valid_mask)
+        
+        if return_depth:
+            outputs.append(_rend_depth)
+
+        if len(outputs) == 1:
+            return outputs[0]
+        return outputs
 
     def vertices_to_trimesh(
         self,

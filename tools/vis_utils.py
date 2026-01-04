@@ -121,34 +121,21 @@ def visualize_sample_together(img_cv2, outputs, faces):
 
     # Render front view
     renderer = Renderer(focal_length=person_output["focal_length"], faces=all_faces)
-    img_mesh = (
-        renderer(
-            all_pred_vertices,
-            np.zeros(3),
-            img_mesh,
-            mesh_base_color=LIGHT_BLUE,
-            scene_bg_color=(1, 1, 1),
-        )
-        * 255
+    img_mesh, color_mesh, valid_mask, depth_mesh = renderer(
+        all_pred_vertices,
+        np.zeros(3),
+        img_mesh,
+        mesh_base_color=LIGHT_BLUE,
+        scene_bg_color=(1, 1, 1),
+        return_color=True,
+        return_valid_mask=True,
+        return_depth=True,
     )
+    img_mesh = (img_mesh * 255).astype(np.uint8)
+    color_mesh = (color_mesh * 255).astype(np.uint8)
+    valid_mask = (valid_mask * 255).astype(np.uint8)
 
-    # # Render side view
-    # white_img = np.ones_like(img_cv2) * 255
-    # img_mesh_side = (
-    #     renderer(
-    #         all_pred_vertices,
-    #         np.zeros(3),
-    #         white_img,
-    #         mesh_base_color=LIGHT_BLUE,
-    #         scene_bg_color=(1, 1, 1),
-    #         side_view=True,
-    #     )
-    #     * 255
-    # )
-
-    cur_img = np.concatenate([img_keypoints, img_mesh], axis=1)
-
-    return cur_img
+    return img_keypoints, img_mesh, color_mesh, valid_mask, depth_mesh
 
 
 def visualize_camera_grid(img_cv2, outputs, faces, camera_poses):

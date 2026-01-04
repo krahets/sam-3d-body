@@ -100,7 +100,7 @@ class SAM3DBodyEstimator:
             img = load_image(img, backend="cv2", image_format="bgr")
             image_format = "bgr"
         else:
-            print("####### Please make sure the input image is in RGB format")
+            # print("####### Please make sure the input image is in RGB format")
             image_format = "rgb"
         height, width = img.shape[:2]
 
@@ -111,7 +111,7 @@ class SAM3DBodyEstimator:
             if image_format == "rgb":
                 img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                 image_format = "bgr"
-            print("Running object detector...")
+            # print("Running object detector...")
             boxes = self.detector.run_human_detection(
                 img,
                 det_cat_id=det_cat_id,
@@ -119,7 +119,7 @@ class SAM3DBodyEstimator:
                 nms_thr=nms_thr,
                 default_to_full_image=False,
             )
-            print("Found boxes:", boxes)
+            # print("Found boxes:", boxes)
             self.is_crop = True
         else:
             boxes = np.array([0, 0, width, height]).reshape(1, 4)
@@ -163,7 +163,7 @@ class SAM3DBodyEstimator:
         # Handle camera intrinsics
         # - either provided externally or generated via default FOV estimator
         if cam_int is not None:
-            print("Using provided camera intrinsics...")
+            # print(f"Using provided camera intrinsics: {cam_int.tolist()}")
             cam_int = torch.from_numpy(cam_int).unsqueeze(0)
             cam_int = cam_int.to(batch["img"]) 
             batch["cam_int"] = cam_int.clone()

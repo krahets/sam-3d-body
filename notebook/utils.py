@@ -74,10 +74,13 @@ def setup_sam_3d_body(
         )
 
     if fov_name:
-        print(f"Loading FOV estimator from {fov_name}...")
-        from tools.build_fov_estimator import FOVEstimator
-
-        fov_estimator = FOVEstimator(name=fov_name, device=device)
+        try:
+            from tools.build_fov_estimator import FOVEstimator
+            print(f"Loading FOV estimator from {fov_name}...")
+            fov_estimator = FOVEstimator(name=fov_name, device=device)
+        except ImportError:
+            print(f"Warning:FOV estimator {fov_name} import error.")
+            fov_estimator = None
 
     # Create estimator wrapper
     estimator = SAM3DBodyEstimator(

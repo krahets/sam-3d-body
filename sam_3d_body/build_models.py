@@ -41,6 +41,9 @@ def load_sam_3d_body(checkpoint_path: str = "", device: str = "cuda", mhr_path: 
 
 
 def _hf_download(repo_id):
+    if os.path.isdir(repo_id):
+        return os.path.join(repo_id, "model.ckpt"), os.path.join(repo_id, "assets", "mhr_model.pt")
+
     from huggingface_hub import snapshot_download
     local_dir = snapshot_download(repo_id=repo_id)
     return os.path.join(local_dir, "model.ckpt"), os.path.join(local_dir, "assets", "mhr_model.pt")

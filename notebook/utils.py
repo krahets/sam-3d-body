@@ -15,8 +15,12 @@ import torch
 
 from sam_3d_body import load_sam_3d_body_hf, SAM3DBodyEstimator
 from sam_3d_body.metadata.mhr70 import pose_info as mhr70_pose_info
-from sam_3d_body.visualization.renderer import Renderer
 from sam_3d_body.visualization.skeleton_visualizer import SkeletonVisualizer
+
+try:
+    from sam_3d_body.visualization.renderer import Renderer
+except ImportError:
+    print("Warning: Renderer import failed.")
 
 LIGHT_BLUE = (0.65098039, 0.74117647, 0.85882353)
 

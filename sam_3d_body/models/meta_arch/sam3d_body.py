@@ -1460,6 +1460,8 @@ class SAM3DBody(BaseModel):
                 keypoint_prompt[:, :, :2] + 0.5, min=0.0, max=1.0
             )  # [-0.5, 0.5] --> [0, 1]
 
+        # TODO: add keypoint prompt here
+        # breakpoint()
         if keypoint_prompt.numel() != 0:
             pose_output, _ = self.run_keypoint_prompt(
                 batch, pose_output, keypoint_prompt

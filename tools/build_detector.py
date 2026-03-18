@@ -65,6 +65,7 @@ class HumanDetector:
         return self.detector_func(self.detector, img, **kwargs)
 
 
+# todo: use fixed path when network is not available
 def load_detectron2_vitdet(path=""):
     """
     Load vitdet detector similar to 4D-Humans demo.py approach.

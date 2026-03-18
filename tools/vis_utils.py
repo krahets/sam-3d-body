@@ -130,7 +130,7 @@ def visualize_sample_together(img_cv2, outputs, faces):
         np.zeros(3),
         img_mesh,
         mesh_base_color=LIGHT_BLUE,
-        scene_bg_color=(1, 1, 1),
+        scene_bg_color=(0, 0, 0),
         return_color=True,
         return_valid_mask=True,
         return_depth=True,
